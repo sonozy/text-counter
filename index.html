@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>空白・改行・タブ文字除去</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: #2c3e50;
+    color: #fff;
+    padding: 16px 24px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .controls {
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    padding: 12px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .control-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+  }
+
+  .toggle input {
+    display: none;
+  }
+
+  .toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 12px;
+    transition: background 0.2s;
+  }
+
+  .toggle .slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .slider {
+    background: #3498db;
+  }
+
+  .toggle input:checked + .slider::before {
+    transform: translateX(20px);
+  }
+
+  .control-group select {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .main {
+    display: flex;
+    gap: 16px;
+    padding: 16px 24px;
+    height: calc(100vh - 120px);
+    min-height: 400px;
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #fafafa;
+    border-bottom: 1px solid #eee;
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .char-count {
+    font-size: 13px;
+    color: #888;
+  }
+
+  .panel-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn {
+    padding: 5px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+  }
+
+  .btn-copy {
+    color: #2980b9;
+    border-color: #2980b9;
+  }
+
+  .btn-copy:hover {
+    background: #2980b9;
+    color: #fff;
+  }
+
+  .btn-clear {
+    color: #c0392b;
+    border-color: #c0392b;
+  }
+
+  .btn-clear:hover {
+    background: #c0392b;
+    color: #fff;
+  }
+
+  .panel textarea {
+    flex: 1;
+    border: none;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    font-family: 'Menlo', 'Consolas', monospace;
+  }
+
+  .panel .output-area {
+    flex: 1;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-y: auto;
+    font-family: 'Menlo', 'Consolas', monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #333;
+    background: #fff;
+  }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: #2c3e50;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    .main {
+      flex-direction: column;
+      height: auto;
+      min-height: calc(100vh - 140px);
+    }
+    .panel {
+      min-height: 250px;
+    }
+    .controls {
+      gap: 12px;
+      padding: 10px 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>空白・改行・タブ文字除去ツール</h1>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>改行除去</label>
+    <label class="toggle">
+      <input type="checkbox" id="removeNewlines" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="control-group">
+    <label>タブ除去</label>
+    <label class="toggle">
+      <input type="checkbox" id="removeTabs" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="control-group">
+    <label>スペース除去</label>
+    <select id="removeSpaces">
+      <option value="all">全て</option>
+      <option value="half">半角のみ</option>
+      <option value="full">全角のみ</option>
+      <option value="none">除去なし</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">入力</span>
+      <span class="char-count" id="inputCount">0 文字</span>
+      <div class="panel-actions">
+        <button class="btn btn-copy" onclick="copyText('input')">全文コピー</button>
+        <button class="btn btn-clear" onclick="clearText('input')">全文削除</button>
+      </div>
+    </div>
+    <textarea id="inputArea" placeholder="ここにテキストを貼り付けてください..."></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">結果</span>
+      <span class="char-count" id="outputCount">0 文字</span>
+      <div class="panel-actions">
+        <button class="btn btn-copy" onclick="copyText('output')">全文コピー</button>
+        <button class="btn btn-clear" onclick="clearText('output')">全文削除</button>
+      </div>
+    </div>
+    <div class="output-area" id="outputArea"></div>
+  </div>
+</div>
+
+<div class="copied-toast" id="toast">コピーしました</div>
+
+<script>
+  const inputArea = document.getElementById('inputArea');
+  const outputArea = document.getElementById('outputArea');
+  const inputCount = document.getElementById('inputCount');
+  const outputCount = document.getElementById('outputCount');
+  const removeNewlines = document.getElementById('removeNewlines');
+  const removeTabs = document.getElementById('removeTabs');
+  const removeSpaces = document.getElementById('removeSpaces');
+  const toast = document.getElementById('toast');
+
+  function process() {
+    let text = inputArea.value;
+    inputCount.textContent = text.length + ' 文字';
+
+    if (removeNewlines.checked) {
+      text = text.replace(/\r\n|\r|\n/g, '');
+    }
+
+    if (removeTabs.checked) {
+      text = text.replace(/\t/g, '');
+    }
+
+    const spaceMode = removeSpaces.value;
+    if (spaceMode === 'all') {
+      text = text.replace(/[ \u3000]/g, '');
+    } else if (spaceMode === 'half') {
+      text = text.replace(/ /g, '');
+    } else if (spaceMode === 'full') {
+      text = text.replace(/\u3000/g, '');
+    }
+
+    outputArea.textContent = text;
+    outputCount.textContent = text.length + ' 文字';
+  }
+
+  inputArea.addEventListener('input', process);
+  removeNewlines.addEventListener('change', process);
+  removeTabs.addEventListener('change', process);
+  removeSpaces.addEventListener('change', process);
+
+  function copyText(target) {
+    let text;
+    if (target === 'input') {
+      text = inputArea.value;
+    } else {
+      text = outputArea.textContent;
+    }
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+    });
+  }
+
+  function clearText(target) {
+    if (target === 'input') {
+      inputArea.value = '';
+      process();
+    } else {
+      outputArea.textContent = '';
+      outputCount.textContent = '0 文字';
+    }
+  }
+</script>
+
+</body>
+</html>

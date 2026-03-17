@@ -252,6 +252,13 @@
     </label>
   </div>
   <div class="control-group">
+    <label>空白行除去</label>
+    <label class="toggle">
+      <input type="checkbox" id="removeBlankLines">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="control-group">
     <label>タブ除去</label>
     <label class="toggle">
       <input type="checkbox" id="removeTabs" checked>
@@ -302,6 +309,7 @@
   const inputCount = document.getElementById('inputCount');
   const outputCount = document.getElementById('outputCount');
   const removeNewlines = document.getElementById('removeNewlines');
+  const removeBlankLines = document.getElementById('removeBlankLines');
   const removeTabs = document.getElementById('removeTabs');
   const removeSpaces = document.getElementById('removeSpaces');
   const toast = document.getElementById('toast');
@@ -309,6 +317,10 @@
   function process() {
     let text = inputArea.value;
     inputCount.textContent = text.length + ' 文字';
+
+    if (removeBlankLines.checked) {
+      text = text.replace(/^\s*[\r\n]/gm, '');
+    }
 
     if (removeNewlines.checked) {
       text = text.replace(/\r\n|\r|\n/g, '');
@@ -333,6 +345,7 @@
 
   inputArea.addEventListener('input', process);
   removeNewlines.addEventListener('change', process);
+  removeBlankLines.addEventListener('change', process);
   removeTabs.addEventListener('change', process);
   removeSpaces.addEventListener('change', process);
 
